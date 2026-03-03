@@ -3,27 +3,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+export const dynamic = 'force-dynamic';
+
 const VIDEO_BLOB_PATH = 'config/main-video.json';
 const VIDEO_LOCAL_FILE = path.join(process.cwd(), 'data', 'video.json');
 
 async function readVideoUrl(): Promise<string | null> {
-  // In development, use local filesystem (faster, no network issues)
   if (process.env.NODE_ENV !== 'production') {
     try {
       if (fs.existsSync(VIDEO_LOCAL_FILE)) {
         const data = JSON.parse(fs.readFileSync(VIDEO_LOCAL_FILE, 'utf8'));
         if (data.url) return data.url;
       }
-    } catch {
-      // Fall through to blob storage
-    }
+    } catch {}
+    return null;
   }
 
-  // In production or as fallback, use Vercel Blob
   try {
     const { blobs } = await list({ prefix: VIDEO_BLOB_PATH });
     if (blobs.length === 0) return null;
-    const res = await fetch(blobs[0].url, { cache: 'no-store' });
+    const res = await fetch(blobs[0].url + '?t=' + Date.now());
     if (!res.ok) return null;
     const data = await res.json();
     return data.url ?? null;

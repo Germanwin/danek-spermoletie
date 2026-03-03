@@ -4,6 +4,8 @@ import { put, list } from '@vercel/blob';
 import path from 'path';
 import fs from 'fs';
 
+export const dynamic = 'force-dynamic';
+
 const WISHES_BLOB_PATH = 'wishes-data/wishes.json';
 const WISHES_LOCAL_FILE = path.join(process.cwd(), 'data', 'wishes.json');
 
@@ -16,22 +18,19 @@ interface Wish {
 }
 
 async function readWishes(): Promise<Wish[]> {
-  // In development, use local filesystem (faster, no network issues)
   if (process.env.NODE_ENV !== 'production') {
     try {
       if (fs.existsSync(WISHES_LOCAL_FILE)) {
         return JSON.parse(fs.readFileSync(WISHES_LOCAL_FILE, 'utf8'));
       }
-    } catch {
-      // Fall through to blob storage
-    }
+    } catch {}
+    return [];
   }
 
-  // In production or as fallback, use Vercel Blob
   try {
     const { blobs } = await list({ prefix: WISHES_BLOB_PATH });
     if (blobs.length === 0) return [];
-    const response = await fetch(blobs[0].url, { cache: 'no-store' });
+    const response = await fetch(blobs[0].url + '?t=' + Date.now());
     if (!response.ok) return [];
     return await response.json();
   } catch {
