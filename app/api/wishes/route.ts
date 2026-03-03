@@ -1,24 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { put } from '@vercel/blob';
-import fs from 'fs';
+import { put, list } from '@vercel/blob';
 import path from 'path';
+import fs from 'fs';
 
-const WISHES_FILE = path.join(process.cwd(), 'data', 'wishes.json');
+const WISHES_BLOB_PATH = 'wishes-data/wishes.json';
+const WISHES_LOCAL_FILE = path.join(process.cwd(), 'data', 'wishes.json');
 
-function readWishes() {
-  if (!fs.existsSync(WISHES_FILE)) {
-    fs.writeFileSync(WISHES_FILE, '[]');
-  }
-  return JSON.parse(fs.readFileSync(WISHES_FILE, 'utf8'));
+interface Wish {
+  id: string;
+  name: string;
+  text: string;
+  media: { url: string; mimetype: string; originalname: string }[];
+  createdAt: string;
 }
 
-function writeWishes(wishes: unknown[]) {
-  fs.writeFileSync(WISHES_FILE, JSON.stringify(wishes, null, 2));
+async function readWishes(): Promise<Wish[]> {
+  // In development, use local filesystem (faster, no network issues)
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      if (fs.existsSync(WISHES_LOCAL_FILE)) {
+        return JSON.parse(fs.readFileSync(WISHES_LOCAL_FILE, 'utf8'));
+      }
+    } catch {
+      // Fall through to blob storage
+    }
+  }
+
+  // In production or as fallback, use Vercel Blob
+  try {
+    const { blobs } = await list({ prefix: WISHES_BLOB_PATH });
+    if (blobs.length === 0) return [];
+    const response = await fetch(blobs[0].url, { cache: 'no-store' });
+    if (!response.ok) return [];
+    return await response.json();
+  } catch {
+    return [];
+  }
+}
+
+async function writeWishes(wishes: Wish[]): Promise<void> {
+  // In development, also write to local filesystem
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(WISHES_LOCAL_FILE, JSON.stringify(wishes, null, 2));
+    } catch (e) {
+      console.error('Failed to write to local file:', e);
+    }
+  }
+
+  // Also update Vercel Blob if not in development
+  if (process.env.NODE_ENV === 'production') {
+    await put(WISHES_BLOB_PATH, JSON.stringify(wishes), {
+      access: 'public',
+      allowOverwrite: true,
+      contentType: 'application/json',
+      addRandomSuffix: false,
+    });
+  }
 }
 
 export async function GET() {
-  const wishes = readWishes();
+  const wishes = await readWishes();
   return NextResponse.json(wishes);
 }
 
@@ -50,7 +97,6 @@ export async function POST(req: NextRequest) {
     if (!(file instanceof File) || file.size === 0) continue;
     const ext = path.extname(file.name) || '';
     const blobName = `wishes/${uuidv4()}${ext}`;
-    // Convert to ArrayBuffer first — passing File directly can hang in Node.js runtime
     const arrayBuffer = await file.arrayBuffer();
     const blob = await put(blobName, arrayBuffer, {
       access: 'public',
@@ -59,7 +105,7 @@ export async function POST(req: NextRequest) {
     media.push({ url: blob.url, mimetype: file.type, originalname: file.name });
   }
 
-  const wish = {
+  const wish: Wish = {
     id: uuidv4(),
     name,
     text,
@@ -67,9 +113,9 @@ export async function POST(req: NextRequest) {
     createdAt: new Date().toISOString(),
   };
 
-  const wishes = readWishes();
+  const wishes = await readWishes();
   wishes.unshift(wish);
-  writeWishes(wishes);
+  await writeWishes(wishes);
 
   return NextResponse.json(wish);
 }

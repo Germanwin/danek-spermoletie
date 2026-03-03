@@ -3,36 +3,38 @@ import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
-const LOCAL_CONFIG = path.join(process.cwd(), 'data', 'video.json');
-const BLOB_CONFIG_PREFIX = 'config/main-video';
+const VIDEO_BLOB_PATH = 'config/main-video.json';
+const VIDEO_LOCAL_FILE = path.join(process.cwd(), 'data', 'video.json');
 
-export async function GET() {
-  // Try local file first (works in dev; on Vercel only if pre-committed)
-  try {
-    if (fs.existsSync(LOCAL_CONFIG)) {
-      const data = JSON.parse(fs.readFileSync(LOCAL_CONFIG, 'utf8'));
-      if (data.url) return NextResponse.json({ url: data.url });
-    }
-  } catch {}
-
-  // Try Vercel Blob config file
-  try {
-    const { blobs } = await list({ prefix: BLOB_CONFIG_PREFIX });
-    if (blobs.length > 0) {
-      const latest = blobs.sort(
-        (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-      )[0];
-      const res = await fetch(latest.url + '?nocache=' + Date.now());
-      if (res.ok) {
-        const data = await res.json();
-        if (data.url) return NextResponse.json({ url: data.url });
+async function readVideoUrl(): Promise<string | null> {
+  // In development, use local filesystem (faster, no network issues)
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      if (fs.existsSync(VIDEO_LOCAL_FILE)) {
+        const data = JSON.parse(fs.readFileSync(VIDEO_LOCAL_FILE, 'utf8'));
+        if (data.url) return data.url;
       }
+    } catch {
+      // Fall through to blob storage
     }
-  } catch (e) {
-    console.error('Failed to read blob config:', e);
   }
 
-  return NextResponse.json({ url: null });
+  // In production or as fallback, use Vercel Blob
+  try {
+    const { blobs } = await list({ prefix: VIDEO_BLOB_PATH });
+    if (blobs.length === 0) return null;
+    const res = await fetch(blobs[0].url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.url ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function GET() {
+  const url = await readVideoUrl();
+  return NextResponse.json({ url });
 }
 
 export async function POST(req: NextRequest) {
@@ -41,24 +43,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Нет URL' }, { status: 400 });
   }
 
-  // Save to local file (works in dev)
-  try {
-    fs.writeFileSync(LOCAL_CONFIG, JSON.stringify({ url }, null, 2));
-  } catch {}
+  // In development, write to local filesystem
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(VIDEO_LOCAL_FILE, JSON.stringify({ url }, null, 2));
+    } catch (e) {
+      console.error('Failed to write video config to local file:', e);
+    }
+  }
 
-  // Save to Vercel Blob (persistent in production)
-  try {
-    const { blobs } = await list({ prefix: BLOB_CONFIG_PREFIX });
+  // In production, update Vercel Blob
+  if (process.env.NODE_ENV === 'production') {
+    const { blobs } = await list({ prefix: VIDEO_BLOB_PATH });
     if (blobs.length > 0) {
       await del(blobs.map(b => b.url));
     }
-    await put('config/main-video.json', JSON.stringify({ url }), {
+
+    await put(VIDEO_BLOB_PATH, JSON.stringify({ url }), {
       access: 'public',
       contentType: 'application/json',
       addRandomSuffix: false,
     });
-  } catch (e) {
-    console.error('Failed to save to blob:', e);
   }
 
   return NextResponse.json({ ok: true });
