@@ -30,7 +30,7 @@ async function readWishes(): Promise<Wish[]> {
   try {
     const { blobs } = await list({ prefix: WISHES_BLOB_PATH });
     if (blobs.length === 0) return [];
-    const response = await fetch(blobs[0].url + '?t=' + Date.now());
+    const response = await fetch(blobs[0].downloadUrl, { cache: 'no-store' });
     if (!response.ok) return [];
     return await response.json();
   } catch {
