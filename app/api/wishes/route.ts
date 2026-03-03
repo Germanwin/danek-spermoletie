@@ -68,63 +68,81 @@ export async function GET() {
   return NextResponse.json(wishes);
 }
 
+const MEDIA_LOCAL_DIR = path.join(process.cwd(), 'public', 'uploads');
+
 export async function POST(req: NextRequest) {
-  const formData = await req.formData();
-  const name = (formData.get('name') as string)?.trim();
-  const text = (formData.get('text') as string)?.trim();
-  const files = formData.getAll('media') as File[];
+  try {
+    const formData = await req.formData();
+    const name = (formData.get('name') as string)?.trim();
+    const text = (formData.get('text') as string)?.trim();
+    const files = formData.getAll('media') as File[];
 
-  if (!name || !text) {
-    return NextResponse.json({ error: 'Нужны имя и текст' }, { status: 400 });
-  }
-
-  const realFiles = files.filter(f => f instanceof File && f.size > 0);
-
-  if (realFiles.length > 3) {
-    return NextResponse.json({ error: 'Максимум 3 медиафайла' }, { status: 400 });
-  }
-
-  const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
-  const UNSUPPORTED_EXTENSIONS = ['.mkv', '.avi', '.wmv', '.flv'];
-
-  for (const file of realFiles) {
-    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
-      return NextResponse.json({ error: 'Разрешены только фото и видео' }, { status: 400 });
+    if (!name || !text) {
+      return NextResponse.json({ error: 'Нужны имя и текст' }, { status: 400 });
     }
-    const ext = path.extname(file.name).toLowerCase();
-    if (file.type.startsWith('video/') && !SUPPORTED_VIDEO_TYPES.includes(file.type) || UNSUPPORTED_EXTENSIONS.includes(ext)) {
-      return NextResponse.json(
-        { error: `Формат ${ext || file.type} не поддерживается браузерами. Используй MP4, WebM или MOV.` },
-        { status: 400 }
-      );
+
+    const realFiles = files.filter(f => f instanceof File && f.size > 0);
+
+    if (realFiles.length > 3) {
+      return NextResponse.json({ error: 'Максимум 3 медиафайла' }, { status: 400 });
     }
+
+    const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+    const UNSUPPORTED_EXTENSIONS = ['.mkv', '.avi', '.wmv', '.flv'];
+
+    for (const file of realFiles) {
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        return NextResponse.json({ error: 'Разрешены только фото и видео' }, { status: 400 });
+      }
+      const ext = path.extname(file.name).toLowerCase();
+      if (file.type.startsWith('video/') && !SUPPORTED_VIDEO_TYPES.includes(file.type) || UNSUPPORTED_EXTENSIONS.includes(ext)) {
+        return NextResponse.json(
+          { error: `Формат ${ext || file.type} не поддерживается браузерами. Используй MP4, WebM или MOV.` },
+          { status: 400 }
+        );
+      }
+    }
+
+    const media: { url: string; mimetype: string; originalname: string }[] = [];
+
+    for (const file of realFiles) {
+      if (!(file instanceof File) || file.size === 0) continue;
+      const ext = path.extname(file.name) || '';
+      const fileName = `${uuidv4()}${ext}`;
+      const arrayBuffer = await file.arrayBuffer();
+
+      if (process.env.NODE_ENV !== 'production') {
+        // Save locally in development
+        if (!fs.existsSync(MEDIA_LOCAL_DIR)) {
+          fs.mkdirSync(MEDIA_LOCAL_DIR, { recursive: true });
+        }
+        fs.writeFileSync(path.join(MEDIA_LOCAL_DIR, fileName), Buffer.from(arrayBuffer));
+        media.push({ url: `/uploads/${fileName}`, mimetype: file.type, originalname: file.name });
+      } else {
+        // Upload to Vercel Blob in production
+        const blob = await put(`wishes/${fileName}`, arrayBuffer, {
+          access: 'public',
+          contentType: file.type,
+        });
+        media.push({ url: blob.url, mimetype: file.type, originalname: file.name });
+      }
+    }
+
+    const wish: Wish = {
+      id: uuidv4(),
+      name,
+      text,
+      media,
+      createdAt: new Date().toISOString(),
+    };
+
+    const wishes = await readWishes();
+    wishes.unshift(wish);
+    await writeWishes(wishes);
+
+    return NextResponse.json(wish);
+  } catch (e) {
+    console.error('POST /api/wishes error:', e);
+    return NextResponse.json({ error: 'Ошибка сервера' }, { status: 500 });
   }
-
-  const media: { url: string; mimetype: string; originalname: string }[] = [];
-
-  for (const file of realFiles) {
-    if (!(file instanceof File) || file.size === 0) continue;
-    const ext = path.extname(file.name) || '';
-    const blobName = `wishes/${uuidv4()}${ext}`;
-    const arrayBuffer = await file.arrayBuffer();
-    const blob = await put(blobName, arrayBuffer, {
-      access: 'public',
-      contentType: file.type,
-    });
-    media.push({ url: blob.url, mimetype: file.type, originalname: file.name });
-  }
-
-  const wish: Wish = {
-    id: uuidv4(),
-    name,
-    text,
-    media,
-    createdAt: new Date().toISOString(),
-  };
-
-  const wishes = await readWishes();
-  wishes.unshift(wish);
-  await writeWishes(wishes);
-
-  return NextResponse.json(wish);
 }
