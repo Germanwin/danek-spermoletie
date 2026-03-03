@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface MediaItem {
-  filename: string;
+  url: string;
   mimetype: string;
   originalname: string;
 }
@@ -45,9 +45,9 @@ function WishCard({ wish, onDelete }: { wish: Wish; onDelete: (id: string) => vo
         <div className="card-media">
           {wish.media.map((m) =>
             m.mimetype.startsWith('image/') ? (
-              <img key={m.filename} src={`/uploads/${m.filename}`} alt={m.originalname} />
+              <img key={m.url} src={m.url} alt={m.originalname} />
             ) : (
-              <video key={m.filename} src={`/uploads/${m.filename}`} controls />
+              <video key={m.url} src={m.url} controls />
             )
           )}
         </div>
@@ -69,9 +69,23 @@ function WishForm({ onClose, onAdded }: { onClose: () => void; onAdded: (w: Wish
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef            = useRef<HTMLInputElement>(null);
 
+  const MAX_FILES = 3;
+
   function addFiles(incoming: FileList | null) {
     if (!incoming) return;
-    setFiles(prev => [...prev, ...Array.from(incoming)]);
+    const allowed = Array.from(incoming).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
+    if (allowed.length < Array.from(incoming).length) {
+      setStatus({ msg: '⚠️ Только фото и видео!', ok: false });
+    }
+    setFiles(prev => {
+      const merged = [...prev, ...allowed];
+      if (merged.length > MAX_FILES) {
+        setStatus({ msg: `⚠️ Максимум ${MAX_FILES} файла!`, ok: false });
+        return merged.slice(0, MAX_FILES);
+      }
+      return merged;
+    });
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   function removeFile(idx: number) {
@@ -141,17 +155,23 @@ function WishForm({ onClose, onAdded }: { onClose: () => void; onAdded: (w: Wish
           </div>
 
           <div className="form-group">
-            <label className="form-label">📎 ФОТКИ / ВИДОСЫ (необязательно)</label>
+            <label className="form-label">📎 ФОТКИ / ВИДОСЫ (необязательно, макс. 3)</label>
             <div
-              className={`file-drop-zone${dragOver ? ' drag-over' : ''}`}
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              className={`file-drop-zone${dragOver ? ' drag-over' : ''}${files.length >= MAX_FILES ? ' drop-zone-disabled' : ''}`}
+              onClick={() => files.length < MAX_FILES && fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); if (files.length < MAX_FILES) setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={e => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
             >
               <span className="file-drop-icon">📁</span>
-              <p>Перетащи или нажми чтобы выбрать</p>
-              <p className="file-drop-sub">Фото и видео, до 100МБ каждый</p>
+              {files.length >= MAX_FILES ? (
+                <p>Лимит достигнут ({MAX_FILES}/{MAX_FILES})</p>
+              ) : (
+                <>
+                  <p>Перетащи или нажми чтобы выбрать</p>
+                  <p className="file-drop-sub">Только фото и видео · макс. {MAX_FILES} файла · до 100МБ каждый</p>
+                </>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"

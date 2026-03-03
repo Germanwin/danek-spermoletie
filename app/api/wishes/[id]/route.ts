@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { del } from '@vercel/blob';
 import fs from 'fs';
 import path from 'path';
 
 const WISHES_FILE = path.join(process.cwd(), 'data', 'wishes.json');
-const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 export async function DELETE(
   _req: NextRequest,
@@ -13,7 +13,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  let wishes: { id: string; media: { filename: string }[] }[] = JSON.parse(
+  let wishes: { id: string; media: { url: string }[] }[] = JSON.parse(
     fs.readFileSync(WISHES_FILE, 'utf8')
   );
 
@@ -22,9 +22,9 @@ export async function DELETE(
     return NextResponse.json({ error: 'Не найдено' }, { status: 404 });
   }
 
-  for (const m of wish.media ?? []) {
-    const filePath = path.join(UPLOADS_DIR, m.filename);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  const blobUrls = (wish.media ?? []).map((m) => m.url).filter(Boolean);
+  if (blobUrls.length > 0) {
+    await del(blobUrls);
   }
 
   wishes = wishes.filter((w) => w.id !== params.id);

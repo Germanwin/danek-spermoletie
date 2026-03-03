@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(gh auth status)",
+      "Bash(git config --global user.name)",
+      "Bash(git config --global user.email)",
+      "Bash(git config --global credential.helper)",
+      "Bash(npm install @vercel/blob)",
+      "Bash(ls /c/Users/grish/coding/comerce/danek-pidarok-den-spermoletia/.env*)",
+      "Bash(node -e \"const pkg = require\\(''./node_modules/@vercel/blob/package.json''\\); console.log\\(pkg.version\\)\")",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"const c = require\\(''@vercel/blob/client''\\); console.log\\(Object.keys\\(c\\)\\)\")"
+    ]
+  }
+}

@@ -1,24 +1,52 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { upload } from '@vercel/blob/client';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 export default function VideoPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [localSrc, setLocalSrc] = useState<string | null>(null);
-  const [hasError, setHasError] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  function handleLocalFile(e: React.ChangeEvent<HTMLInputElement>) {
+  useEffect(() => {
+    fetch('/api/video')
+      .then(r => r.json())
+      .then(data => { if (data.url) setVideoUrl(data.url); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setLocalSrc(url);
-    setHasError(false);
-  }
+    e.target.value = '';
 
-  // When server video fails to load, show placeholder
-  const serverSrc = '/birthday-video.mp4';
-  const showVideo = localSrc || (!hasError);
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        onUploadProgress: ({ percentage }) => setUploadProgress(Math.round(percentage)),
+      });
+
+      await fetch('/api/video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: blob.url }),
+      });
+
+      setVideoUrl(blob.url);
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Ошибка загрузки 💥');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <main>
@@ -36,48 +64,41 @@ export default function VideoPage() {
         <div className="video-frame">
           <div className="video-deco-bar">💩 💩 💩 🎂 ВИДОС ДЛЯ ДАНЕЧКИ 🎂 💩 💩 💩</div>
 
-          {localSrc ? (
+          {loading ? (
+            <div className="video-placeholder">
+              <span className="placeholder-icon">⏳</span>
+              <p className="placeholder-title">ЗАГРУЖАЕМ...</p>
+            </div>
+          ) : videoUrl ? (
             <video
               ref={videoRef}
               className="video-el"
-              src={localSrc}
+              src={videoUrl}
               controls
               autoPlay
             />
-          ) : hasError ? (
+          ) : (
             <div className="video-placeholder">
               <span className="placeholder-icon">🎬</span>
               <p className="placeholder-title">ТУТ БУДЕТ ВИДОС</p>
-              <p className="placeholder-sub">
-                Положи видео в <code>public/birthday-video.mp4</code><br />
-                или загрузи прямо сейчас ↓
-              </p>
-              <label className="local-upload-btn">
-                📁 ЗАГРУЗИТЬ ВИДОС
-                <input type="file" accept="video/*" onChange={handleLocalFile} style={{ display: 'none' }} />
-              </label>
+              <p className="placeholder-sub">Загрузи видео — оно сохранится навсегда ↓</p>
             </div>
-          ) : (
-            <video
-              ref={videoRef}
-              className="video-el"
-              src={serverSrc}
-              controls
-              onError={() => setHasError(true)}
-            />
           )}
 
           <div className="video-deco-bar">🍆 🍆 🍆 🎉 С ДНЁМ РОЖДЕНИЯ 🎉 🍆 🍆 🍆</div>
         </div>
 
-        {hasError && !localSrc && (
-          <></>
-        )}
-
-        {!hasError && !localSrc && (
+        {uploading ? (
+          <div className="upload-progress-wrap">
+            <p className="upload-progress-text">⏳ ЗАКАЧИВАЕМ... {uploadProgress}%</p>
+            <div className="progress-bar">
+              <div className="progress-bar-fill" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          </div>
+        ) : (
           <label className="local-upload-btn" style={{ marginTop: 16 }}>
-            📁 Загрузить другой видос
-            <input type="file" accept="video/*" onChange={handleLocalFile} style={{ display: 'none' }} />
+            📁 {videoUrl ? 'Заменить видос' : 'ЗАГРУЗИТЬ ВИДОС'}
+            <input type="file" accept="video/*" onChange={handleUpload} style={{ display: 'none' }} />
           </label>
         )}
 

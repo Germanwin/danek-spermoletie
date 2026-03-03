@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
+import { put } from '@vercel/blob';
 import fs from 'fs';
 import path from 'path';
 
 const WISHES_FILE = path.join(process.cwd(), 'data', 'wishes.json');
-const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 function readWishes() {
   if (!fs.existsSync(WISHES_FILE)) {
@@ -23,10 +23,6 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
-
   const formData = await req.formData();
   const name = (formData.get('name') as string)?.trim();
   const text = (formData.get('text') as string)?.trim();
@@ -36,15 +32,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Нужны имя и текст' }, { status: 400 });
   }
 
-  const media: { filename: string; mimetype: string; originalname: string }[] = [];
+  const realFiles = files.filter(f => f instanceof File && f.size > 0);
 
-  for (const file of files) {
-    if (!(file instanceof File)) continue;
+  if (realFiles.length > 3) {
+    return NextResponse.json({ error: 'Максимум 3 медиафайла' }, { status: 400 });
+  }
+
+  for (const file of realFiles) {
+    if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      return NextResponse.json({ error: 'Разрешены только фото и видео' }, { status: 400 });
+    }
+  }
+
+  const media: { url: string; mimetype: string; originalname: string }[] = [];
+
+  for (const file of realFiles) {
+    if (!(file instanceof File) || file.size === 0) continue;
     const ext = path.extname(file.name) || '';
-    const filename = uuidv4() + ext;
-    const buffer = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(path.join(UPLOADS_DIR, filename), buffer);
-    media.push({ filename, mimetype: file.type, originalname: file.name });
+    const blobName = `wishes/${uuidv4()}${ext}`;
+    // Convert to ArrayBuffer first — passing File directly can hang in Node.js runtime
+    const arrayBuffer = await file.arrayBuffer();
+    const blob = await put(blobName, arrayBuffer, {
+      access: 'public',
+      contentType: file.type,
+    });
+    media.push({ url: blob.url, mimetype: file.type, originalname: file.name });
   }
 
   const wish = {
