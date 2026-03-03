@@ -76,6 +76,8 @@ export default function VideoPage() {
               src={videoUrl}
               controls
               autoPlay
+              playsInline
+              preload="auto"
             />
           ) : (
             <div className="video-placeholder">

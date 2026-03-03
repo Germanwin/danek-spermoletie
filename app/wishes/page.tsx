@@ -45,9 +45,36 @@ function WishCard({ wish, onDelete }: { wish: Wish; onDelete: (id: string) => vo
         <div className="card-media">
           {wish.media.map((m) =>
             m.mimetype.startsWith('image/') ? (
-              <img key={m.url} src={m.url} alt={m.originalname} />
+              <img
+                key={m.url}
+                src={m.url}
+                alt={m.originalname}
+                loading="lazy"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (!img.dataset.retried) {
+                    img.dataset.retried = '1';
+                    img.src = m.url + '?retry=' + Date.now();
+                  } else {
+                    img.style.display = 'none';
+                  }
+                }}
+              />
             ) : (
-              <video key={m.url} src={m.url} controls />
+              <video
+                key={m.url}
+                src={m.url}
+                controls
+                playsInline
+                preload="metadata"
+                onError={(e) => {
+                  const vid = e.currentTarget;
+                  if (!vid.dataset.retried) {
+                    vid.dataset.retried = '1';
+                    vid.src = m.url + '?retry=' + Date.now();
+                  }
+                }}
+              />
             )
           )}
         </div>
@@ -71,11 +98,19 @@ function WishForm({ onClose, onAdded }: { onClose: () => void; onAdded: (w: Wish
 
   const MAX_FILES = 3;
 
+  const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+
   function addFiles(incoming: FileList | null) {
     if (!incoming) return;
-    const allowed = Array.from(incoming).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/'));
-    if (allowed.length < Array.from(incoming).length) {
-      setStatus({ msg: '⚠️ Только фото и видео!', ok: false });
+    const all = Array.from(incoming);
+    const allowed = all.filter(f => {
+      if (f.type.startsWith('image/')) return true;
+      if (f.type.startsWith('video/') && SUPPORTED_VIDEO_TYPES.includes(f.type)) return true;
+      return false;
+    });
+    if (allowed.length < all.length) {
+      const rejected = all.length - allowed.length;
+      setStatus({ msg: `⚠️ ${rejected} файл(ов) отклонено. Видео: только MP4, WebM, MOV`, ok: false });
     }
     setFiles(prev => {
       const merged = [...prev, ...allowed];
@@ -176,7 +211,7 @@ function WishForm({ onClose, onAdded }: { onClose: () => void; onAdded: (w: Wish
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,video/*"
+                accept="image/*,video/mp4,video/webm,video/quicktime"
                 style={{ display: 'none' }}
                 onChange={e => addFiles(e.target.files)}
               />

@@ -84,9 +84,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Максимум 3 медиафайла' }, { status: 400 });
   }
 
+  const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
+  const UNSUPPORTED_EXTENSIONS = ['.mkv', '.avi', '.wmv', '.flv'];
+
   for (const file of realFiles) {
     if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
       return NextResponse.json({ error: 'Разрешены только фото и видео' }, { status: 400 });
+    }
+    const ext = path.extname(file.name).toLowerCase();
+    if (file.type.startsWith('video/') && !SUPPORTED_VIDEO_TYPES.includes(file.type) || UNSUPPORTED_EXTENSIONS.includes(ext)) {
+      return NextResponse.json(
+        { error: `Формат ${ext || file.type} не поддерживается браузерами. Используй MP4, WebM или MOV.` },
+        { status: 400 }
+      );
     }
   }
 
