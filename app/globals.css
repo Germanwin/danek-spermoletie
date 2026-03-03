@@ -1,0 +1,654 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Bebas+Neue&display=swap');
+
+/* ===================== RESET ===================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ===================== INSANE ROOT ===================== */
+:root {
+  --pink: #ff00cc;
+  --cyan: #00ffff;
+  --lime: #aaff00;
+  --orange: #ff6600;
+  --yellow: #ffff00;
+  --purple: #cc00ff;
+  --red: #ff0033;
+  --bg: #0a0010;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+  background: var(--bg);
+  color: white;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ===================== ANIMATED BACKGROUND ===================== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(255,0,204,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(0,255,255,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(170,255,0,0.08) 0%, transparent 60%);
+  animation: bgPulse 6s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes bgPulse {
+  0%   { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 1;   transform: scale(1.05); }
+}
+
+/* scanlines overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.15) 2px,
+    rgba(0,0,0,0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ===================== NAV ===================== */
+.nav-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #ff00cc, #00ffff, #aaff00, #ff6600, #ff00cc);
+  background-size: 400% 100%;
+  animation: rainbowShift 3s linear infinite;
+  border-bottom: 4px solid white;
+  box-shadow: 0 4px 30px rgba(255,0,204,0.8);
+}
+
+@keyframes rainbowShift {
+  0%   { background-position: 0% 0; }
+  100% { background-position: 400% 0; }
+}
+
+.nav-link {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 2px;
+  color: #000;
+  text-decoration: none;
+  padding: 6px 20px;
+  border: 3px solid black;
+  background: rgba(255,255,255,0.3);
+  border-radius: 4px;
+  transition: transform 0.1s, background 0.1s;
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.5);
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background: black;
+  color: white;
+  transform: scale(1.08) rotate(-2deg);
+}
+
+/* ===================== PAGE WRAPPER ===================== */
+.page-wrapper {
+  position: relative;
+  z-index: 1;
+  padding-top: 70px;
+  min-height: 100vh;
+}
+
+/* ===================== FLOATING EMOJIS ===================== */
+.floating-emoji {
+  position: fixed;
+  font-size: 2rem;
+  pointer-events: none;
+  z-index: 0;
+  animation: floatUp linear infinite;
+  opacity: 0;
+}
+
+@keyframes floatUp {
+  0%   { transform: translateY(0) rotate(0deg);   opacity: 0; }
+  10%  { opacity: 0.9; }
+  90%  { opacity: 0.7; }
+  100% { transform: translateY(-110vh) rotate(720deg); opacity: 0; }
+}
+
+/* ===================== TITLES ===================== */
+.hero-section {
+  text-align: center;
+  padding: 40px 20px 20px;
+}
+
+.emoji-strip {
+  font-size: 1.8rem;
+  letter-spacing: 4px;
+  display: block;
+  margin: 8px 0;
+  animation: emojiWiggle 1.5s ease-in-out infinite;
+}
+
+@keyframes emojiWiggle {
+  0%, 100% { letter-spacing: 4px; }
+  50%       { letter-spacing: 8px; }
+}
+
+.main-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3rem, 10vw, 7rem);
+  line-height: 1;
+  position: relative;
+  display: inline-block;
+  color: var(--yellow);
+  text-shadow:
+    3px 3px 0 var(--pink),
+    6px 6px 0 var(--cyan),
+    9px 9px 0 var(--purple),
+    0 0 30px var(--pink),
+    0 0 60px var(--cyan);
+  animation: glitch 3s infinite;
+}
+
+@keyframes glitch {
+  0%, 94%, 100% {
+    text-shadow:
+      3px 3px 0 var(--pink),
+      6px 6px 0 var(--cyan),
+      0 0 30px var(--pink);
+    transform: none;
+  }
+  95% {
+    text-shadow: -4px 2px 0 var(--red), 4px -2px 0 var(--cyan);
+    transform: skewX(-5deg) translateX(4px);
+  }
+  97% {
+    text-shadow: 4px -2px 0 var(--pink), -4px 2px 0 var(--lime);
+    transform: skewX(5deg) translateX(-4px);
+  }
+}
+
+.subtitle {
+  font-size: clamp(1.2rem, 4vw, 2.2rem);
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan), 0 0 40px var(--cyan);
+  animation: blink 1.2s step-end infinite;
+  margin: 10px 0;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.1; }
+}
+
+.tagline {
+  font-size: clamp(1rem, 3vw, 1.4rem);
+  color: var(--lime);
+  text-shadow: 0 0 10px var(--lime);
+  margin: 8px 0 20px;
+  animation: wiggle 2s ease-in-out infinite;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-1deg); }
+  50%       { transform: rotate(1deg); }
+}
+
+/* ===================== VIDEO PAGE ===================== */
+.video-outer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.video-frame {
+  width: 100%;
+  max-width: 860px;
+  border: 6px solid var(--pink);
+  box-shadow:
+    0 0 0 4px var(--cyan),
+    0 0 0 8px var(--purple),
+    0 0 40px var(--pink),
+    0 0 80px rgba(0,255,255,0.4);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  background: #000;
+  animation: framePulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes framePulse {
+  from { box-shadow: 0 0 0 4px var(--cyan), 0 0 0 8px var(--purple), 0 0 40px var(--pink); }
+  to   { box-shadow: 0 0 0 4px var(--pink), 0 0 0 8px var(--lime),   0 0 80px var(--cyan); }
+}
+
+.video-deco-bar {
+  background: linear-gradient(90deg, var(--pink), var(--cyan), var(--lime), var(--orange), var(--pink));
+  background-size: 300% 100%;
+  animation: rainbowShift 2s linear infinite;
+  padding: 6px 0;
+  text-align: center;
+  font-size: 1.3rem;
+  letter-spacing: 6px;
+}
+
+.video-el {
+  width: 100%;
+  display: block;
+  max-height: 60vh;
+  background: #000;
+}
+
+.video-placeholder {
+  width: 100%;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: radial-gradient(circle, #1a0030, #000);
+  padding: 40px;
+  text-align: center;
+}
+
+.placeholder-icon { font-size: 5rem; animation: spin 4s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.placeholder-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  color: var(--yellow);
+}
+
+.placeholder-sub {
+  color: #aaa;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.placeholder-sub code {
+  background: rgba(255,255,255,0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--lime);
+  font-family: monospace;
+}
+
+.local-upload-btn {
+  display: inline-block;
+  cursor: pointer;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  color: white;
+  font-family: 'Comic Neue', cursive;
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 3px solid white;
+  transition: transform 0.15s;
+}
+.local-upload-btn:hover { transform: scale(1.05) rotate(-2deg); }
+
+.go-wishes-btn {
+  display: inline-block;
+  margin-top: 32px;
+  padding: 16px 40px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 2px;
+  color: black;
+  background: linear-gradient(135deg, var(--yellow), var(--orange));
+  border: 4px solid black;
+  border-radius: 8px;
+  text-decoration: none;
+  box-shadow: 6px 6px 0 black;
+  transition: transform 0.1s, box-shadow 0.1s;
+  animation: shakeBtn 3s ease-in-out infinite;
+}
+.go-wishes-btn:hover {
+  transform: translateY(-4px) rotate(-2deg);
+  box-shadow: 10px 10px 0 black;
+}
+
+@keyframes shakeBtn {
+  0%, 90%, 100% { transform: rotate(0deg); }
+  92% { transform: rotate(-3deg) scale(1.03); }
+  94% { transform: rotate(3deg) scale(1.03); }
+  96% { transform: rotate(-2deg); }
+  98% { transform: rotate(2deg); }
+}
+
+/* ===================== WISHES PAGE ===================== */
+.wishes-header {
+  text-align: center;
+  padding: 40px 20px 10px;
+}
+
+.add-btn-wrap { text-align: center; padding: 20px; }
+
+.add-wish-btn {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.8rem;
+  letter-spacing: 2px;
+  padding: 16px 44px;
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  color: white;
+  border: 4px solid white;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 30px var(--pink), 6px 6px 0 rgba(0,0,0,0.5);
+  transition: transform 0.1s;
+  animation: shakeBtn 4s ease-in-out infinite;
+}
+.add-wish-btn:hover { transform: scale(1.06) rotate(2deg); }
+
+/* ===================== WISH CARDS GRID ===================== */
+.wishes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+  padding: 20px 24px 60px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.wish-card {
+  border-radius: 12px;
+  border: 4px solid;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 8px 8px 0 rgba(0,0,0,0.6), 0 0 20px currentColor;
+  transition: transform 0.2s;
+}
+.wish-card:hover { transform: scale(1.03); z-index: 2; }
+
+/* random rotations */
+.wish-card:nth-child(3n+1) { transform: rotate(-1.5deg); }
+.wish-card:nth-child(3n+2) { transform: rotate(1deg); }
+.wish-card:nth-child(3n+3) { transform: rotate(-0.5deg); }
+.wish-card:nth-child(3n+1):hover { transform: rotate(-1.5deg) scale(1.04); }
+.wish-card:nth-child(3n+2):hover { transform: rotate(1deg) scale(1.04); }
+.wish-card:nth-child(3n+3):hover { transform: rotate(-0.5deg) scale(1.04); }
+
+.card-color-0  { border-color: var(--pink);   background: linear-gradient(135deg, #2a0030, #1a0020); color: var(--pink); }
+.card-color-1  { border-color: var(--cyan);   background: linear-gradient(135deg, #002a30, #001020); color: var(--cyan); }
+.card-color-2  { border-color: var(--lime);   background: linear-gradient(135deg, #1a2a00, #0a1000); color: var(--lime); }
+.card-color-3  { border-color: var(--orange); background: linear-gradient(135deg, #2a1000, #180800); color: var(--orange); }
+.card-color-4  { border-color: var(--yellow); background: linear-gradient(135deg, #2a2a00, #181000); color: var(--yellow); }
+.card-color-5  { border-color: var(--purple); background: linear-gradient(135deg, #200030, #100020); color: var(--purple); }
+
+.card-deco {
+  position: absolute;
+  top: 6px; right: 10px;
+  font-size: 1.8rem;
+  opacity: 0.5;
+}
+
+.card-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+.card-text {
+  color: white;
+  font-size: 1rem;
+  line-height: 1.6;
+  word-break: break-word;
+  text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+}
+
+.card-date {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  margin-top: 10px;
+  color: white;
+}
+
+.card-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.card-media img,
+.card-media video {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 6px;
+  border: 2px solid rgba(255,255,255,0.3);
+  object-fit: cover;
+}
+
+.card-delete-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: var(--red);
+  border: none;
+  color: white;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.wish-card:hover .card-delete-btn { opacity: 1; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 1.2rem;
+  color: #888;
+  grid-column: 1/-1;
+}
+.empty-state .big { font-size: 4rem; display: block; margin-bottom: 12px; }
+
+/* ===================== MODAL ===================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.modal-box {
+  background: linear-gradient(135deg, #1a0030, #000820);
+  border: 5px solid var(--pink);
+  border-radius: 16px;
+  padding: 32px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 0 60px var(--pink), 0 0 120px rgba(0,255,255,0.3);
+  animation: modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.7); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px; right: 14px;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.modal-close:hover { transform: rotate(90deg) scale(1.3); color: var(--red); }
+
+.modal-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2rem;
+  text-align: center;
+  color: var(--yellow);
+  text-shadow: 0 0 20px var(--yellow);
+  margin-bottom: 24px;
+}
+
+.form-group { margin-bottom: 20px; }
+
+.form-label {
+  display: block;
+  font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 6px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  background: rgba(255,255,255,0.07);
+  border: 2px solid var(--purple);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: white;
+  font-family: 'Comic Neue', cursive;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  resize: vertical;
+}
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 12px var(--cyan);
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 0.78rem;
+  color: #666;
+  margin-top: 4px;
+}
+
+.file-drop-zone {
+  border: 3px dashed var(--purple);
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  color: #aaa;
+}
+.file-drop-zone:hover,
+.file-drop-zone.drag-over {
+  border-color: var(--cyan);
+  background: rgba(0,255,255,0.05);
+  color: white;
+}
+.file-drop-icon { font-size: 2.5rem; display: block; margin-bottom: 8px; }
+.file-drop-sub { font-size: 0.8rem; color: #666; margin-top: 4px; }
+
+.file-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.preview-item {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 2px solid var(--purple);
+}
+.preview-item img,
+.preview-item video {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  display: block;
+}
+.preview-item .remove-file {
+  position: absolute;
+  top: 2px; right: 2px;
+  background: var(--red);
+  border: none;
+  color: white;
+  font-size: 0.65rem;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 14px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.6rem;
+  letter-spacing: 2px;
+  background: linear-gradient(135deg, var(--pink), var(--purple));
+  color: white;
+  border: 3px solid white;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 20px var(--pink);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.submit-btn:hover:not(:disabled) {
+  transform: scale(1.03) rotate(-1deg);
+  box-shadow: 0 0 40px var(--pink);
+}
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.form-status {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.95rem;
+  min-height: 24px;
+}
+.status-ok  { color: var(--lime); }
+.status-err { color: var(--red); }
+
+/* ===================== LOADING ===================== */
+.loading-state {
+  text-align: center;
+  padding: 60px;
+  font-size: 3rem;
+  animation: spin 1s linear infinite;
+  display: block;
+}
