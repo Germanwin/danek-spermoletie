@@ -98,19 +98,13 @@ function WishForm({ onClose, onAdded }: { onClose: () => void; onAdded: (w: Wish
 
   const MAX_FILES = 3;
 
-  const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
-
   function addFiles(incoming: FileList | null) {
     if (!incoming) return;
     const all = Array.from(incoming);
-    const allowed = all.filter(f => {
-      if (f.type.startsWith('image/')) return true;
-      if (f.type.startsWith('video/') && SUPPORTED_VIDEO_TYPES.includes(f.type)) return true;
-      return false;
-    });
+    const allowed = all.filter(f => f.type.startsWith('image/'));
     if (allowed.length < all.length) {
       const rejected = all.length - allowed.length;
-      setStatus({ msg: `⚠️ ${rejected} файл(ов) отклонено. Видео: только MP4, WebM, MOV`, ok: false });
+      setStatus({ msg: `⚠️ ${rejected} файл(ов) отклонено. Можно только фото!`, ok: false });
     }
     setFiles(prev => {
       const merged = [...prev, ...allowed];
@@ -190,7 +184,7 @@ function WishForm({ onClose, onAdded }: { onClose: () => void; onAdded: (w: Wish
           </div>
 
           <div className="form-group">
-            <label className="form-label">📎 ФОТКИ / ВИДОСЫ (необязательно, макс. 3)</label>
+            <label className="form-label">📎 ФОТКИ (необязательно, макс. 3)</label>
             <div
               className={`file-drop-zone${dragOver ? ' drag-over' : ''}${files.length >= MAX_FILES ? ' drop-zone-disabled' : ''}`}
               onClick={() => files.length < MAX_FILES && fileInputRef.current?.click()}
@@ -204,14 +198,14 @@ function WishForm({ onClose, onAdded }: { onClose: () => void; onAdded: (w: Wish
               ) : (
                 <>
                   <p>Перетащи или нажми чтобы выбрать</p>
-                  <p className="file-drop-sub">Только фото и видео · макс. {MAX_FILES} файла · до 100МБ каждый</p>
+                  <p className="file-drop-sub">Только фото · макс. {MAX_FILES} файла · до 100МБ каждый</p>
                 </>
               )}
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,video/mp4,video/webm,video/quicktime"
+                accept="image/*"
                 style={{ display: 'none' }}
                 onChange={e => addFiles(e.target.files)}
               />
@@ -221,11 +215,7 @@ function WishForm({ onClose, onAdded }: { onClose: () => void; onAdded: (w: Wish
               <div className="file-preview">
                 {files.map((f, i) => (
                   <div key={i} className="preview-item">
-                    {f.type.startsWith('image/') ? (
-                      <img src={URL.createObjectURL(f)} alt={f.name} />
-                    ) : (
-                      <video src={URL.createObjectURL(f)} />
-                    )}
+                    <img src={URL.createObjectURL(f)} alt={f.name} />
                     <button type="button" className="remove-file" onClick={() => removeFile(i)}>✖</button>
                   </div>
                 ))}
