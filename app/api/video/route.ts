@@ -37,37 +37,60 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { url } = await req.json();
-  if (!url || typeof url !== 'string') {
-    return NextResponse.json({ error: 'Нет URL' }, { status: 400 });
-  }
+  try {
+    const formData = await req.formData();
+    const file = formData.get('file') as File | null;
 
-  // In development, write to local filesystem
-  if (process.env.NODE_ENV !== 'production') {
-    try {
+    if (!file || !(file instanceof File) || file.size === 0) {
+      return NextResponse.json({ error: 'Нет файла' }, { status: 400 });
+    }
+
+    let url: string;
+
+    if (process.env.NODE_ENV !== 'production') {
+      // Save locally in development
+      const ext = file.name.split('.').pop() || 'mp4';
+      const fileName = `main-video.${ext}`;
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      fs.writeFileSync(
+        path.join(uploadsDir, fileName),
+        Buffer.from(await file.arrayBuffer()),
+      );
+      url = `/uploads/${fileName}`;
+    } else {
+      // Upload to Vercel Blob server-side
+      const blob = await put(`video/${file.name}`, file, {
+        access: 'public',
+        contentType: file.type,
+      });
+      url = blob.url;
+    }
+
+    // Save video URL to config
+    if (process.env.NODE_ENV !== 'production') {
       const dataDir = path.join(process.cwd(), 'data');
       if (!fs.existsSync(dataDir)) {
         fs.mkdirSync(dataDir, { recursive: true });
       }
       fs.writeFileSync(VIDEO_LOCAL_FILE, JSON.stringify({ url }, null, 2));
-    } catch (e) {
-      console.error('Failed to write video config to local file:', e);
+    } else {
+      const { blobs } = await list({ prefix: VIDEO_BLOB_PATH });
+      if (blobs.length > 0) {
+        await del(blobs.map(b => b.url));
+      }
+      await put(VIDEO_BLOB_PATH, JSON.stringify({ url }), {
+        access: 'public',
+        contentType: 'application/json',
+        addRandomSuffix: false,
+      });
     }
+
+    return NextResponse.json({ url });
+  } catch (e) {
+    console.error('POST /api/video error:', e);
+    return NextResponse.json({ error: 'Ошибка загрузки' }, { status: 500 });
   }
-
-  // In production, update Vercel Blob
-  if (process.env.NODE_ENV === 'production') {
-    const { blobs } = await list({ prefix: VIDEO_BLOB_PATH });
-    if (blobs.length > 0) {
-      await del(blobs.map(b => b.url));
-    }
-
-    await put(VIDEO_BLOB_PATH, JSON.stringify({ url }), {
-      access: 'public',
-      contentType: 'application/json',
-      addRandomSuffix: false,
-    });
-  }
-
-  return NextResponse.json({ ok: true });
 }

@@ -1,6 +1,5 @@
 'use client';
 
-import { upload } from '@vercel/blob/client';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
@@ -27,19 +26,32 @@ export default function VideoPage() {
     setUploadProgress(0);
 
     try {
-      const blob = await upload(file.name, file, {
-        access: 'public',
-        handleUploadUrl: '/api/upload',
-        onUploadProgress: ({ percentage }) => setUploadProgress(Math.round(percentage)),
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const data = await new Promise<{ url: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/video');
+
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(JSON.parse(xhr.responseText));
+          } else {
+            reject(new Error(xhr.responseText || 'Upload failed'));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.send(formData);
       });
 
-      await fetch('/api/video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: blob.url }),
-      });
-
-      setVideoUrl(blob.url);
+      setVideoUrl(data.url);
     } catch (err) {
       console.error('Upload failed:', err);
       alert('Ошибка загрузки 💥');
