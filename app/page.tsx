@@ -21,8 +21,6 @@ export default function VideoPage() {
             className="video-el"
             src="/video.mp4"
             controls
-            autoPlay
-            playsInline
             preload="auto"
           />
 
