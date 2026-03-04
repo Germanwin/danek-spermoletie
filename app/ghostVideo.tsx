@@ -6,29 +6,42 @@ import { useMute } from "./MuteContext"
 export const GhostVideo = () => {
 	const { isMuted } = useMute()
 	const videoRef = useRef<HTMLVideoElement>(null)
-	const hasStarted = useRef(false)
+	const startedRef = useRef(false)
 
 	useEffect(() => {
 		const video = videoRef.current
-		if (!video || hasStarted.current) return
+		if (!video) return
 
-		hasStarted.current = true
-		video.muted = true
-		video.play().then(() => {
+		const tryPlay = () => {
+			if (startedRef.current) return
+			startedRef.current = true
 			video.muted = isMuted
-		}).catch(() => {})
+			video.play().catch(() => {
+				startedRef.current = false
+			})
+		}
+
+		document.addEventListener("click", tryPlay, { once: true })
+		document.addEventListener("touchstart", tryPlay, { once: true })
+		document.addEventListener("keydown", tryPlay, { once: true })
+
+		return () => {
+			document.removeEventListener("click", tryPlay)
+			document.removeEventListener("touchstart", tryPlay)
+			document.removeEventListener("keydown", tryPlay)
+		}
 	}, [isMuted])
 
 	useEffect(() => {
-		const video = videoRef.current
-		if (!video || !hasStarted.current) return
-		video.muted = isMuted
+		if (videoRef.current && startedRef.current) {
+			videoRef.current.muted = isMuted
+		}
 	}, [isMuted])
 
 	return (
 		<video
 			ref={videoRef}
-			style={{ position: "fixed", width: "0px", height: "0px", opacity: "0" }}
+			style={{ position: "fixed", width: "1px", height: "1px", opacity: "0.01" }}
 			src="/goofy.mp4"
 			playsInline
 			preload="auto"
