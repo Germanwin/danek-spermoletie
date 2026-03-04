@@ -27,7 +27,7 @@ export default function VideoPage() {
 
 					<video
 						className="video-el"
-						src="/video.mp4"
+						src="/video.MOV"
 						controls
 						preload="auto"
 					/>
